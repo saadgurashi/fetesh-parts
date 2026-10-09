@@ -1,1 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>طلب قطع غيار هيونداي - فتش عربيتك</title>
+<style>
+:root{--navy:#0b1b3a;--red:#d0021b;--bg:#f3f5f9;--bd:#d9deea}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--navy);font-family:system-ui,Tahoma,sans-serif;line-height:1.6}
+header{background:var(--navy);color:#fff;padding:22px 16px 26px;border-bottom:4px solid var(--red);text-align:center}
+header h1{margin:0;font-size:21px}
+header p{margin:6px 0 0;font-size:14px;opacity:.85}
+main{max-width:560px;margin:0 auto;padding:14px}
+.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(11,27,58,.08)}
+.card h2{margin:0 0 10px;font-size:16px}
+.card h2 small{font-weight:400;opacity:.6;font-size:12px}
+input[type=text],input[type=tel],select,textarea{width:100%;font:inherit;padding:13px;border:1px solid var(--bd);border-radius:10px;background:#fff;color:var(--navy);min-height:48px}
+textarea{min-height:90px}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.chip span{display:block;padding:10px 14px;border:1px solid var(--bd);border-radius:999px;background:#fff;font-size:15px}
+.chip input:checked+span{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700}
+details{border:1px solid var(--bd);border-radius:10px;margin-bottom:8px;overflow:hidden}
+summary{padding:13px;font-weight:700;background:#f8f9fc;cursor:pointer}
+details .chips{padding:12px}
+.count{font-size:13px;color:var(--red);margin-top:6px;font-weight:700}
+button{width:100%;padding:17px;font:inherit;font-weight:700;font-size:18px;color:#fff;background:#1faa59;border:0;border-radius:14px}
+.err{color:var(--red);font-size:14px;font-weight:700;margin:10px 0;display:none}
+.note{font-size:13px;opacity:.7;text-align:center;margin:10px 0 24px}
+</style>
+</head>
+<body>
+<header>
+<h1>🔧 قطع غيار هيونداي</h1>
+<p>فتش عربيتك — اختر القطع المطلوبة وتصلك فاتورة مبدئية على واتساب</p>
+</header>
+<main>
 
+<div class="card"><h2>1. موديل السيارة</h2>
+<div class="chips" id="models"></div>
+<div class="row" style="margin-top:12px">
+<select id="year"></select>
+<input type="text" id="vin" placeholder="رقم الشاسيه (اختياري)" dir="ltr">
+</div></div>
+
+<div class="card"><h2>2. القطع المطلوبة <small>(يمكنك اختيار أكثر من قطعة)</small></h2>
+<div id="parts"></div>
+<div class="count" id="count"></div>
+<textarea id="notes" placeholder="قطع أخرى أو تفاصيل (اللون، اليمين/اليسار، رقم القطعة...)" style="margin-top:8px"></textarea>
+</div>
+
+<div class="card"><h2>3. حالة القطعة</h2>
+<div class="chips" id="cond"></div></div>
+
+<div class="card"><h2>4. بياناتك</h2>
+<input type="text" id="name" placeholder="الاسم (اختياري)" style="margin-bottom:10px">
+<select id="city" style="margin-bottom:10px"></select>
+<input type="tel" id="phone" placeholder="رقم الواتساب  09XXXXXXXX" inputmode="tel" dir="ltr">
+</div>
+
+<div class="err" id="err"></div>
+<button id="send" type="button">📲 إرسال الطلب عبر واتساب</button>
+<p class="note">سيفتح واتساب برسالة جاهزة، اضغط إرسال فقط. ويمكنك إرفاق صور القطعة بعدها.</p>
+</main>
+
+<script>
+var WA="249913714136";
+var MODELS=["أكسنت","جياد","كلك","فيرنا","مضلع","توسان","أخرى"];
+var CONDS=["جديد","مستعمل","لا يهم"];
+var CITIES=["الخرطوم","أم درمان","بحري","ود مدني","بورتسودان","كسلا","القضارف","الأبيض","كوستي","نيالا","خارج السودان","أخرى"];
+var PARTS={
+"💡 الإضاءة":["فانوس أمامي يمين","فانوس أمامي يسار","فانوس خلفي يمين","فانوس خلفي يسار","كشاف ضباب","إشارة جانبية"],
+"🚗 الهيكل والبودي":["صدام أمامي","صدام خلفي","شبكة أمامية","غطاء المكينة","رفرف يمين","رفرف يسار","باب","غطاء الشنطة"],
+"🪟 الزجاج والمرايا":["مرآة يمين","مرآة يسار","زجاج أمامي","زجاج خلفي","زجاج باب"],
+"⚙️ المكينة والميكانيكا":["رادياتير","مساعدين","بطارية","دينمو","سلف","فلاتر وزيوت","سيور"],
+"🔌 الداخلية والكهرباء":["تابلوه","مقاعد","راديو / شاشة","ريموت / مفتاح","مساحات"]
+};
+
+function el(id){return document.getElementById(id);}
+function chip(type,name,val,checked){
+  return '<label class="chip"><input type="'+type+'" name="'+name+'" value="'+val+'"'+(checked?' checked':'')+'><span>'+val+'</span></label>';
+}
+el("models").innerHTML=MODELS.map(function(m){return chip("radio","model",m);}).join("");
+el("cond").innerHTML=CONDS.map(function(c,i){return chip("radio","cond",c,i==2);}).join("");
+var y=new Date().getFullYear(),yo='<option value="">سنة الصنع</option>';
+for(var i=y;i>=2000;i--)yo+='<option>'+i+'</option>';
+el("year").innerHTML=yo;
+el("city").innerHTML='<option value="">اختر مدينتك</option>'+CITIES.map(function(c){return '<option>'+c+'</option>';}).join("");
+var first=true,ph="";
+for(var g in PARTS){
+  ph+='<details'+(first?' open':'')+'><summary>'+g+'</summary><div class="chips">'+
+  PARTS[g].map(function(p){return chip("checkbox","part",p);}).join("")+'</div></details>';
+  first=false;
+}
+el("parts").innerHTML=ph;
+
+function selected(){
+  var a=[],n=document.querySelectorAll('input[name=part]:checked');
+  for(var i=0;i<n.length;i++)a.push(n[i].value);
+  return a;
+}
+function radio(name){var r=document.querySelector('input[name='+name+']:checked');return r?r.value:"";}
+document.addEventListener("change",function(){
+  var n=selected().length;
+  el("count").textContent=n?("✔ تم اختيار "+n+" قطعة"):"";
+});
+function digits(s){
+  return s.replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);}).replace(/\D/g,"");
+}
+function fail(m){var e=el("err");e.textContent=m;e.style.display="block";e.scrollIntoView({behavior:"smooth",block:"center"});}
+
+el("send").onclick=function(){
+  var model=radio("model"),parts=selected(),notes=el("notes").value.trim();
+  var phone=digits(el("phone").value),city=el("city").value;
+  if(!model)return fail("الرجاء اختيار موديل السيارة.");
+  if(!parts.length&&!notes)return fail("الرجاء اختيار قطعة واحدة على الأقل أو كتابتها في الملاحظات.");
+  if(!city)return fail("الرجاء اختيار المدينة.");
+  if(phone.length<9)return fail("الرجاء كتابة رقم واتساب صحيح.");
+  el("err").style.display="none";
+  var ref="FA-"+Math.floor(1000+Math.random()*9000);
+  var msg="🔧 *طلب قطع غيار - فتش عربيتك*\n"
+   +"رقم الطلب: "+ref+"\n\n"
+   +"🚗 السيارة: هيونداي "+model+(el("year").value?" - "+el("year").value:"")+"\n"
+   +(el("vin").value.trim()?"🔢 الشاسيه: "+el("vin").value.trim()+"\n":"")
+   +"✅ الحالة: "+radio("cond")+"\n"
+   +"📍 المدينة: "+city+"\n\n"
+   +"🧩 *القطع المطلوبة:*\n"+parts.map(function(p){return "• "+p;}).join("\n")
+   +(notes?"\n\n📝 ملاحظات: "+notes:"")
+   +"\n\n👤 الاسم: "+(el("name").value.trim()||"-")
+   +"\n📞 رقم التواصل: "+phone;
+  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");
+};
+</script>
+</body>
+</html>
